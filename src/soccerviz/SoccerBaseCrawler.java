@@ -22,24 +22,26 @@ public class SoccerBaseCrawler {
 	String getTournaments(){
 		StringBuffer sb = new StringBuffer();
 		int[] tournaments = {1435, 1386, 1304, 1159, 939, 1, 2, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117};
-		
+		int count = 0;
 		for(int i = 0; i < tournaments.length; i++){
 			try {
 				String cur = url+"tournaments/tournament.sd?tourn_id="+tournaments[i];
-				Document doc = Jsoup.connect(cur).get();
+				Connection con = Jsoup.connect(cur).header("Cache-Control", "no-cache").header("Cache-Store", "no-store");
+				Document doc = con.get();
 				Elements table = doc.getElementsByTag("table");
-				System.out.println(table.get(0).childNodeSize());
-				if(table.get(0).childNodeSize() == 2){
+				//System.out.println(table.get(0).childNodeSize());
+				if(i == 5){
 					System.out.println(doc);
 				}
 				hangup();
 			} catch (Exception e) {
 				System.out.println("error at: "+i);
+				System.out.println(e.getMessage());
 				System.exit(0);
 				e.printStackTrace();
 			}
 		}
-		
+		System.out.println(count);
 		return null;
 		
 	}
