@@ -11,7 +11,7 @@ import java.util.*;
 
 public class SoccerBaseCrawler {
 	TreeSet<Integer> teamIds;
-	List<Integer> p2t; //player to team
+	List<Integer> p2t;
 	TreeSet<Integer> tour_ids;
 	String url = "http://www.soccerbase.com/";
 	String[] tids;
@@ -259,8 +259,9 @@ public class SoccerBaseCrawler {
 		sb = new StringBuffer();
 		sb = appendToBuffer(sb, headers2);
 		writeFile("matches.csv", sb.toString(), false);
-		for(Integer id: p2t){
-			
+		int startIndex = 0;
+		for(int j = startIndex; j < p2t.size(); j++){
+			int id = p2t.get(j);
 			//get basic info
 			String cur = "http://www.soccerbase.com/players/player.sd?player_id="+id;
 			String[] curData = new String[headers.length];
