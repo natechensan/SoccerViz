@@ -11,21 +11,24 @@ import java.util.*;
 
 public class SoccerBaseCrawler {
 	TreeSet<Integer> teamIds;
+	List<Integer> p2t; //player to team
+	TreeSet<Integer> tour_ids;
 	String url = "http://www.soccerbase.com/";
 	String[] tids;
+	int[] cids = {116, 171, 25, 133, 127, 117, 112, 23,
+			1, 2,3,4,12,13,14,15,
+			208, 22,20,114,134,132,19,76,
+			306, 48, 206,124,24,123,111,264,
+			126,21,194,205,122,113,118,47};
 	
 	SoccerBaseCrawler(){
 		teamIds = new TreeSet<Integer>();
-
+		p2t = new ArrayList<Integer>();
+		tour_ids = new TreeSet<Integer>();
 	}
 	
 	void getIDs(){
 		StringBuffer sb = new StringBuffer();
-		int[] cids = {116, 171, 25, 133, 127, 117, 112, 23,
-				1, 2,3,4,12,13,14,15,
-				208, 22,20,114,134,132,19,76,
-				306, 48, 206,124,24,123,111,264,
-				126,21,194,205,122,113,118,47};
 		Arrays.sort(cids);
 		ArrayList<String> idList = new ArrayList<String>();
 		for(int id : cids){
@@ -183,7 +186,7 @@ public class SoccerBaseCrawler {
 				String cur = "http://www.soccerbase.com/teams/team.sd?season_id="+year+"&team_id="+id+"&teamTabs=stats";
 				Connection con = Jsoup.connect(cur).userAgent("Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36").followRedirects(false).timeout(8000).header("Host", "soccerbase.com").header("Upgrade-Insecure-Requests", "1").header("Connection", "keep-alive");
 				try {
-					Thread.sleep(100);
+					Thread.sleep(50);
 				} catch (InterruptedException e2) {
 					// TODO Auto-generated catch block
 					e2.printStackTrace();
@@ -238,25 +241,152 @@ public class SoccerBaseCrawler {
 				"Place of Birth",
 				"Nationality",
 		};
+		String[] headers2 = {
+			"Player ID",
+			"Season ID",
+			"Team ID",
+			"Opponent ID",
+			"Goal Scored",
+			"Goal Against",
+			"Win/Lose",
+			"Individual Goal",
+			"Yellow",
+			"Red",
+			"League",
+		};
 		sb = appendToBuffer(sb, headers);
-		String cur = "http://www.soccerbase.com/players/player.sd?player_id=30921";
-		String[] curData = new String[headers.length];
-		Connection con = Jsoup.connect(cur).userAgent("Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36").followRedirects(false).timeout(8000).header("Host", "soccerbase.com").header("Upgrade-Insecure-Requests", "1").header("Connection", "keep-alive");
-		try {
-			Document doc = con.get();
-			curData[0] = "41643"; //team id
+		writeFile("PlayerInfo.csv", sb.toString(), false);
+		sb = new StringBuffer();
+		sb = appendToBuffer(sb, headers2);
+		writeFile("matches.csv", sb.toString(), false);
+		for(Integer id: p2t){
+			
+			//get basic info
+			String cur = "http://www.soccerbase.com/players/player.sd?player_id="+id;
+			String[] curData = new String[headers.length];
+			sb = new StringBuffer();
+			Connection con = Jsoup.connect(cur).userAgent("Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36").followRedirects(false).timeout(8000).header("Host", "soccerbase.com").header("Upgrade-Insecure-Requests", "1").header("Connection", "keep-alive");
+			try {
+				Thread.sleep(50);
+			} catch (InterruptedException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			}
+			Document doc = null;
+			while(true){
+				try {
+					doc = con.get();
+					break;
+				} catch (IOException e) {
+					try {
+						hangup();
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					System.out.printf("error at: %d\n", id);
+					System.out.println(e.getMessage());
+				}
+			}
+			curData[0] = ""+id; //player id
 			String[] NameNumber = doc.select(".imageHead h1").get(0).text().split("\\.");
-			curData[1] = NameNumber[1].trim(); // Name
+			if(NameNumber.length > 1){ // has number
+				curData[1] = NameNumber[1].trim(); // Name
+				curData[3] = NameNumber[0].replace(".", ""); // Number
+			}
+			else{
+				curData[1] = NameNumber[0].trim();
+			}
 			curData[2] = doc.select(".midfielder.bull").get(0).text().trim().split(" ")[0];
-			curData[3] = NameNumber[0].replace(".", ""); // Number
 			Elements trs = doc.select(".soccerContent .soccerColumnLast .clubInfo tbody tr");
 			curData[4] = "\""+trs.get(0).select("strong").get(0).text()+"\""; // PoB
 			curData[5] = trs.get(1).select("strong").get(0).text(); // Nationality
 			appendToBuffer(sb, curData);
-			System.out.println(sb);
-		} catch (IOException e) {
-			e.printStackTrace();
+			writeFile("PlayerInfo.csv", sb.toString(), true);
+			
+			
+			//get match info
+			Elements seasons = doc.select("#seasonSelect option");
+			
+			if(!seasons.isEmpty()){
+				for(int i = 1; i < seasons.size(); i++){
+					String curSeason = seasons.get(i).attr("value");
+					cur = "http://www.soccerbase.com/players/player.sd?player_id="+id+"&season_id="+curSeason;
+					con = Jsoup.connect(cur).userAgent("Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36").followRedirects(false).timeout(8000).header("Host", "soccerbase.com").header("Upgrade-Insecure-Requests", "1").header("Connection", "keep-alive");
+					try {
+						Thread.sleep(50);
+					} catch (InterruptedException e2) {
+						// TODO Auto-generated catch block
+						e2.printStackTrace();
+					}
+					doc = null;
+					while(true){
+						try {
+							doc = con.get();
+							break;
+						} catch (IOException e) {
+							try {
+								hangup();
+							} catch (InterruptedException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+							System.out.printf("error at: %d\n", id);
+							System.out.println(e.getMessage());
+						}
+					}
+					trs = doc.select(".soccerGrid tbody tr.match");
+					for(Element tr : trs){
+						int compid = Integer.parseInt(trs.select(".tournament a").get(0).attr("href").split("=")[1]);
+						if(tour_ids.contains(compid)){ //if the match is in the league we want
+							//let's start!
+							try{
+								curData = new String[headers2.length];
+								sb = new StringBuffer();
+								curData[0] = ""+id; //player id
+								curData[1] = curSeason; // season id
+//								Element team = tr.select(".team:not(.inactive)").get(0);
+//								Element opponent = tr.select(".team.inactive").get(0);
+								Element team = null, opponent = null;
+								Elements teams = tr.select(".team");
+								for(Element t : teams){
+									if(t.hasClass("inactive")) opponent = t;
+									else team = t;
+								}
+								Elements score = tr.select(".score a em");
+								curData[2] = team.select("a").get(0).attr("href").split("=")[1]; //own team
+								curData[3] = opponent.select("a").get(0).attr("href").split("=")[1]; //opponent team
+								if(tr.children().indexOf(team) < tr.children().indexOf(opponent)){
+									//home team
+									curData[4] = score.get(0).text(); // own goals
+									curData[5] = score.get(1).text(); // opponent goals
+								}
+								else{
+									//away team
+									curData[4] = score.get(1).text();
+									curData[5] = score.get(0).text();
+								}
+								curData[6] = Integer.parseInt(curData[4]) > Integer.parseInt(curData[5]) ? "true" : "false";
+								Elements blankCards = tr.select(".blankCard");
+								if(!blankCards.get(0).html().equals("")){
+									curData[7] = blankCards.get(0).select("span").get(0).text(); // personal goals
+								}
+								curData[8] = blankCards.get(1).html().equals("") ? "false" : "true"; // yellow card?
+								curData[9] = blankCards.get(2).hasClass("redCard") ? "true" : "false"; // red card?
+								curData[10] = trs.select(".tournament a").get(0).text().trim(); // league name
+								appendToBuffer(sb, curData);
+								writeFile("matches.csv", sb.toString(), true);
+							}catch(Exception e){
+								System.out.println("error url: "+cur);
+								e.printStackTrace();
+								System.exit(0);
+							}
+						}
+					}
+				}
+			}
 		}
+		System.out.println("done.");
 		return sb.toString();
 	}
 	
@@ -269,12 +399,35 @@ public class SoccerBaseCrawler {
 					teamIds.add(Integer.parseInt(s));
 			}
 			scan.close();
-			System.out.println(teamIds);
+			System.out.println(teamIds.size());
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
+	}
+	
+	void loadPlayerIds(){
+		try {
+			Scanner scan = new Scanner(new File("TeamSquad.csv"));
+			while(scan.hasNext()){
+				String s = scan.nextLine().split(",")[2];
+				if(!s.equals("Player ID") && !p2t.contains(Integer.parseInt(s)))
+					p2t.add(Integer.parseInt(s));
+			}
+			scan.close();
+			Collections.sort(p2t);
+			System.out.println(p2t);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	void loadTournaments(){
+		for(int i : cids){
+			tour_ids.add(i);
+		}
 	}
 	
 	void writeFile(String filename, String content, boolean append){

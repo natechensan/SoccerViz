@@ -11,7 +11,10 @@ public class RunCrawler {
 		SoccerBaseCrawler crawler = new SoccerBaseCrawler();
 //		crawler.getIDs();
 //		crawler.getTournaments();
-		crawler.loadTeamIds();
-		crawler.getSquad();
+//		crawler.loadTeamIds();
+//		crawler.getSquad();
+		crawler.loadPlayerIds();
+		crawler.loadTournaments();
+		crawler.getPlayerInfo();
 	}
 }
