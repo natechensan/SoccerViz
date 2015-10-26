@@ -12,6 +12,6 @@ public class RunCrawler {
 //		crawler.getIDs();
 //		crawler.getTournaments();
 		crawler.loadTeamIds();
-		crawler.getTeamInfo();
+		crawler.getSquad();
 	}
 }

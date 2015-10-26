@@ -124,32 +124,41 @@ public class SoccerBaseCrawler {
 			String[] curData = new String[infoHeaders.length];
 			sb = new StringBuffer();
 			Connection con = Jsoup.connect(cur).userAgent("Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36").followRedirects(false).timeout(8000).header("Host", "soccerbase.com").header("Upgrade-Insecure-Requests", "1").header("Connection", "keep-alive");
-			try {
-				Document doc = con.get();
-				Element head = doc.select(".pageHeader").get(0);
-				curData[0] = ""+id; //team id
-				curData[1] = head.select("h1").get(0).html().split(" <")[0]; //team name
-				String imgUrl = null;
-				try{
+			Document doc = null;
+			while(true){
+				try {
+					doc = con.get();
+					break;
+				}
+				catch (IOException e) {
+					System.out.printf("error at: %d\n", id);
+					System.out.println(e.getMessage());
+				}
+			}
+			Element head = doc.select(".pageHeader").get(0);
+			curData[0] = ""+id; //team id
+			curData[1] = head.select("h1").get(0).html().split(" <")[0]; //team name
+			String imgUrl = null;
+			try{
 				imgUrl = head.select(".imageHead img").get(0).absUrl("src");
 				String newName = id+"-"+curData[1]+".png";
 				if(imgUrl != null)
 					curData[2] = DownloadImg(imgUrl, newName); //local image path
-				}
-				catch(IndexOutOfBoundsException e){
-					System.out.printf("error at: %d\n", id);
-					System.out.println(e.getMessage());
-					curData[2] = imgUrl;
-				}
-				curData[3] = doc.select(".clubInfo td strong").get(0).text();
-				if(curData[3].equals("")) curData[3] = null;
-				appendToBuffer(sb, curData);
-				writeFile("TeamInfo.csv", sb.toString(), true);
-	//			System.out.println(sb);
+			}
+			catch(IndexOutOfBoundsException e){
+				System.out.printf("error at: %d\n", id);
+				System.out.println(e.getMessage());
+				curData[2] = imgUrl;
 			} catch (IOException e) {
 				System.out.printf("error at: %d\n", id);
 				System.out.println(e.getMessage());
 			}
+			curData[3] = doc.select(".clubInfo td strong").get(0).text();
+			if(curData[3].equals("")) curData[3] = null;
+			appendToBuffer(sb, curData);
+			writeFile("TeamInfo.csv", sb.toString(), true);
+//			System.out.println(sb);
+			
 		}
 		System.out.println("done writing team info.csv.");
 		return sb.toString();
@@ -166,27 +175,56 @@ public class SoccerBaseCrawler {
 				"Goals"
 		};
 		sb = appendToBuffer(sb, headers);
-		String cur = "http://www.soccerbase.com/teams/team.sd?team_id=142&teamTabs=stats";
-		String[] curData = new String[headers.length];
-		Connection con = Jsoup.connect(cur).userAgent("Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36").followRedirects(false).timeout(8000).header("Host", "soccerbase.com").header("Upgrade-Insecure-Requests", "1").header("Connection", "keep-alive");
-		try {
-			Document doc = con.get();
-			Elements trs = doc.select(".table.center tbody tr");
-			for(Element row : trs){
-				curData[0] = "142"; //team id
-				curData[1] = "145"; //season id
-				Element a = row.select("td a").get(0);
-				curData[2] = a.attr("href").split("=")[1]; //player id
-				curData[3] = a.text(); // player name
-				Elements tds = row.select("td");
-				curData[4] = tds.get(1).text(); // Appearances
-				curData[5] = tds.get(2).text(); // Goals
-				appendToBuffer(sb, curData);
+		writeFile("TeamSquad.csv", sb.toString(), false);
+		for(Integer id : teamIds){
+			for(int j = 2015; j >= 1996; j--){
+				
+				int year = j-1870;
+				String cur = "http://www.soccerbase.com/teams/team.sd?season_id="+year+"&team_id="+id+"&teamTabs=stats";
+				Connection con = Jsoup.connect(cur).userAgent("Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36").followRedirects(false).timeout(8000).header("Host", "soccerbase.com").header("Upgrade-Insecure-Requests", "1").header("Connection", "keep-alive");
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e2) {
+					// TODO Auto-generated catch block
+					e2.printStackTrace();
+				}
+				Document doc = null;
+				while(true){
+					try {
+						doc = con.get();
+						break;
+					}
+					catch (IOException e) {
+						try {
+							hangup();
+						} catch (InterruptedException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						System.out.printf("error at: %d\n", id);
+						System.out.println(e.getMessage());
+					}
+				}
+				Elements trs = doc.select(".table.center tbody tr");
+				if(trs != null && !trs.isEmpty()){
+					for(Element row : trs){
+						sb = new StringBuffer();
+						String[] curData = new String[headers.length];
+						curData[0] = ""+id; //team id
+						curData[1] = ""+year; //season id
+						Element a = row.select("td a").get(0);
+						curData[2] = a.attr("href").split("=")[1]; //player id
+						curData[3] = a.text(); // player name
+						Elements tds = row.select("td");
+						curData[4] = tds.get(1).text(); // Appearances
+						curData[5] = tds.get(2).text(); // Goals
+						appendToBuffer(sb, curData);
+						writeFile("TeamSquad.csv", sb.toString(), true);
+					}
+				}
 			}
-			System.out.println(sb);
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
+		System.out.println("done writing team squad.csv.");
 		return sb.toString();
 	}
 	
