@@ -10,16 +10,13 @@ import org.jsoup.select.*;
 import java.util.*;
 
 public class SoccerBaseCrawler {
-	HashMap<String, String> ids;
+	TreeSet<Integer> teamIds;
 	String url = "http://www.soccerbase.com/";
 	String[] tids;
 	
 	SoccerBaseCrawler(){
-		ids = new HashMap<String, String>();
-		ids.put("team", "team_id");
-		ids.put("tournament", "tourn_id");
-		ids.put("season", "season_id");
-		ids.put("player", "player_id");
+		teamIds = new TreeSet<Integer>();
+
 	}
 	
 	void getIDs(){
@@ -119,25 +116,42 @@ public class SoccerBaseCrawler {
 	
 	String getTeamInfo(){
 		StringBuffer sb = new StringBuffer();
-		String[] headers = {"Team ID", "Team Name", "Logo URL", "Nickname"};
-		sb = appendToBuffer(sb, headers);
-		String cur = "http://www.soccerbase.com/teams/team.sd?team_id=142";
-		String[] curData = new String[headers.length];
-		Connection con = Jsoup.connect(cur).userAgent("Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36").followRedirects(false).timeout(8000).header("Host", "soccerbase.com").header("Upgrade-Insecure-Requests", "1").header("Connection", "keep-alive");
-		try {
-			Document doc = con.get();
-			Element head = doc.select(".pageHeader").get(0);
-			curData[0] = "142"; //team id
-			curData[1] = head.select("h1").get(0).html().split(" <")[0]; //team name
-			String imgUrl = head.select(".imageHead img").get(0).absUrl("src");
-			String newName = 142+"-"+curData[1]+".png";
-			curData[2] = DownloadImg(imgUrl, newName); //local image path
-			curData[3] = doc.select(".clubInfo td strong").get(0).text();
-			appendToBuffer(sb, curData);
-			System.out.println(sb);
-		} catch (IOException e) {
-			e.printStackTrace();
+		String[] infoHeaders = {"Team ID", "Team Name", "Logo URL", "Nickname"};
+		sb = appendToBuffer(sb, infoHeaders);
+		writeFile("TeamInfo.csv", sb.toString(), false);
+		for(Integer id : teamIds){
+			String cur = "http://www.soccerbase.com/teams/team.sd?team_id="+id;
+			String[] curData = new String[infoHeaders.length];
+			sb = new StringBuffer();
+			Connection con = Jsoup.connect(cur).userAgent("Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36").followRedirects(false).timeout(8000).header("Host", "soccerbase.com").header("Upgrade-Insecure-Requests", "1").header("Connection", "keep-alive");
+			try {
+				Document doc = con.get();
+				Element head = doc.select(".pageHeader").get(0);
+				curData[0] = ""+id; //team id
+				curData[1] = head.select("h1").get(0).html().split(" <")[0]; //team name
+				String imgUrl = null;
+				try{
+				imgUrl = head.select(".imageHead img").get(0).absUrl("src");
+				String newName = id+"-"+curData[1]+".png";
+				if(imgUrl != null)
+					curData[2] = DownloadImg(imgUrl, newName); //local image path
+				}
+				catch(IndexOutOfBoundsException e){
+					System.out.printf("error at: %d\n", id);
+					System.out.println(e.getMessage());
+					curData[2] = imgUrl;
+				}
+				curData[3] = doc.select(".clubInfo td strong").get(0).text();
+				if(curData[3].equals("")) curData[3] = null;
+				appendToBuffer(sb, curData);
+				writeFile("TeamInfo.csv", sb.toString(), true);
+	//			System.out.println(sb);
+			} catch (IOException e) {
+				System.out.printf("error at: %d\n", id);
+				System.out.println(e.getMessage());
+			}
 		}
+		System.out.println("done writing team info.csv.");
 		return sb.toString();
 	}
 	
@@ -206,6 +220,23 @@ public class SoccerBaseCrawler {
 			e.printStackTrace();
 		}
 		return sb.toString();
+	}
+	
+	void loadTeamIds(){
+		try {
+			Scanner scan = new Scanner(new File("tournaments.csv"));
+			while(scan.hasNext()){
+				String s = scan.nextLine().split(",")[1];
+				if(!s.equals("Team ID") && !teamIds.contains(Integer.parseInt(s)))
+					teamIds.add(Integer.parseInt(s));
+			}
+			scan.close();
+			System.out.println(teamIds);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 	
 	void writeFile(String filename, String content, boolean append){
