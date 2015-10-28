@@ -260,8 +260,8 @@ public class SoccerBaseCrawler {
 		sb = new StringBuffer();
 		sb = appendToBuffer(sb, headers2);
 		writeFile("matches1.csv", sb.toString(), false);
-		int startIndex = 7531;
-		for(int j = startIndex; j < 30000; j++){
+		int startIndex = 30000;
+		for(int j = startIndex; j < p2t.size(); j++){
 			int id = p2t.get(j);
 			//get basic info
 			String cur = "http://www.soccerbase.com/players/player.sd?player_id="+id;
