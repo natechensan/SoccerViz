@@ -35,7 +35,7 @@ def write_file(file, info): #write iles
 
 
 year_start=2015
-num_files=5
+num_files=4
 
 for y in range(0,num_files):
     year=year_start-y
