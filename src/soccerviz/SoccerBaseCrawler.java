@@ -240,6 +240,7 @@ public class SoccerBaseCrawler {
 				"Number",
 				"Place of Birth",
 				"Nationality",
+				"Birth Year"
 		};
 		String[] headers2 = {
 			"Player ID",
@@ -253,14 +254,16 @@ public class SoccerBaseCrawler {
 			"Yellow",
 			"Red",
 			"League",
-			"League ID"
+			"League ID",
+			"Date",
+			"Home"
 		};
 		sb = appendToBuffer(sb, headers);
-		writeFile("PlayerInfo1.csv", sb.toString(), false);
+		writeFile("PlayerInfo.csv", sb.toString(), false);
 		sb = new StringBuffer();
 		sb = appendToBuffer(sb, headers2);
-		writeFile("matches1.csv", sb.toString(), false);
-		int startIndex = 30000;
+		writeFile("matches.csv", sb.toString(), false);
+		int startIndex = 0;
 		for(int j = startIndex; j < p2t.size(); j++){
 			int id = p2t.get(j);
 			//get basic info
@@ -268,12 +271,12 @@ public class SoccerBaseCrawler {
 			String[] curData = new String[headers.length];
 			sb = new StringBuffer();
 			Connection con = Jsoup.connect(cur).userAgent("Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36").followRedirects(false).timeout(8000).header("Host", "soccerbase.com").header("Upgrade-Insecure-Requests", "1").header("Connection", "keep-alive");
-			try {
-				Thread.sleep(50);
-			} catch (InterruptedException e2) {
-				// TODO Auto-generated catch block
-				e2.printStackTrace();
-			}
+//			try {
+//				Thread.sleep(50);
+//			} catch (InterruptedException e2) {
+//				// TODO Auto-generated catch block
+//				e2.printStackTrace();
+//			}
 			Document doc = null;
 			while(true){
 				try {
@@ -303,8 +306,15 @@ public class SoccerBaseCrawler {
 			Elements trs = doc.select(".soccerContent .soccerColumnLast .clubInfo tbody tr");
 			curData[4] = "\""+trs.get(0).select("strong").get(0).text()+"\""; // PoB
 			curData[5] = trs.get(1).select("strong").get(0).text(); // Nationality
+			curData[6] = doc.select(".soccerContent .soccerColumn tbody tr").get(1).text();
+			try{
+				curData[6] = curData[6].substring(curData[6].length()-5, curData[6].length()-1);
+			}catch(Exception e){
+				logError("Missing Player Age: "+j);
+				curData[6] = null;
+			}
 			appendToBuffer(sb, curData);
-			writeFile("PlayerInfo1.csv", sb.toString(), true);
+			writeFile("PlayerInfo.csv", sb.toString(), true);
 			
 			
 			//get match info
@@ -315,12 +325,12 @@ public class SoccerBaseCrawler {
 					String curSeason = seasons.get(i).attr("value");
 					cur = "http://www.soccerbase.com/players/player.sd?player_id="+id+"&season_id="+curSeason;
 					con = Jsoup.connect(cur).userAgent("Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36").followRedirects(false).timeout(8000).header("Host", "soccerbase.com").header("Upgrade-Insecure-Requests", "1").header("Connection", "keep-alive");
-					try {
-						Thread.sleep(5);
-					} catch (InterruptedException e2) {
-						// TODO Auto-generated catch block
-						e2.printStackTrace();
-					}
+//					try {
+//						Thread.sleep(5);
+//					} catch (InterruptedException e2) {
+//						// TODO Auto-generated catch block
+//						e2.printStackTrace();
+//					}
 					doc = null;
 					while(true){
 						try {
@@ -339,7 +349,7 @@ public class SoccerBaseCrawler {
 					}
 					trs = doc.select(".soccerGrid tbody tr.match");
 					for(Element tr : trs){
-						Elements elem = trs.select(".tournament a");
+						Elements elem = tr.select(".tournament a");
 						if(elem.isEmpty()) continue;
 						int compid = Integer.parseInt(elem.get(0).attr("href").split("=")[1]);
 						if(tour_ids.contains(compid)){ //if the match is in the league we want
@@ -357,6 +367,8 @@ public class SoccerBaseCrawler {
 									if(t.hasClass("inactive")) opponent = t;
 									else team = t;
 								}
+								if(team.hasClass("homeTeam")) curData[13] = "true";
+								else curData[13] = "false"; //if it is home game
 								Elements score = tr.select(".score a em");
 								curData[2] = team.select("a").get(0).attr("href").split("=")[1]; //own team
 								curData[3] = opponent.select("a").get(0).attr("href").split("=")[1]; //opponent team
@@ -370,7 +382,8 @@ public class SoccerBaseCrawler {
 									curData[4] = score.get(1).text();
 									curData[5] = score.get(0).text();
 								}
-								curData[6] = Integer.parseInt(curData[4]) > Integer.parseInt(curData[5]) ? "true" : "false";
+								curData[6] = Integer.parseInt(curData[4]) > Integer.parseInt(curData[5]) ? "true" : "false"; //win or lose
+								curData[12] = tr.select(".dateTime a").get(0).text();
 								Elements blankCards = tr.select(".blankCard");
 								if(!blankCards.get(0).html().equals("")){
 									curData[7] = blankCards.get(0).select("span").get(0).text(); // personal goals
@@ -380,7 +393,7 @@ public class SoccerBaseCrawler {
 								curData[10] = trs.select(".tournament a").get(0).text().trim(); // league name
 								curData[11] = ""+compid; // league
 								appendToBuffer(sb, curData);
-								writeFile("matches1.csv", sb.toString(), true);
+								writeFile("matches.csv", sb.toString(), true);
 							}catch(Exception e){
 								System.out.println("error url: "+cur);
 								e.printStackTrace();
@@ -422,7 +435,7 @@ public class SoccerBaseCrawler {
 			}
 			scan.close();
 			Collections.sort(p2t);
-			System.out.println(p2t);
+			System.out.println(p2t.get(98));
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
