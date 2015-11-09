@@ -258,13 +258,13 @@ public class SoccerBaseCrawler {
 			"Date",
 			"Home"
 		};
-		sb = appendToBuffer(sb, headers);
-		writeFile("PlayerInfo.csv", sb.toString(), false);
-		sb = new StringBuffer();
-		sb = appendToBuffer(sb, headers2);
-		writeFile("matches.csv", sb.toString(), false);
-		int startIndex = 0;
-		for(int j = startIndex; j < p2t.size(); j++){
+//		sb = appendToBuffer(sb, headers);
+//		writeFile("PlayerInfo.csv", sb.toString(), false);
+//		sb = new StringBuffer();
+//		sb = appendToBuffer(sb, headers2);
+//		writeFile("matches.csv", sb.toString(), false);
+		int startIndex = 12194;
+		for(int j = startIndex; j < 15000; j++){
 			int id = p2t.get(j);
 			//get basic info
 			String cur = "http://www.soccerbase.com/players/player.sd?player_id="+id;
@@ -390,7 +390,7 @@ public class SoccerBaseCrawler {
 								}
 								curData[8] = blankCards.get(1).html().equals("") ? "false" : "true"; // yellow card?
 								curData[9] = blankCards.get(2).hasClass("redCard") ? "true" : "false"; // red card?
-								curData[10] = trs.select(".tournament a").get(0).text().trim(); // league name
+								curData[10] = tr.select(".tournament a").get(0).text().trim(); // league name
 								curData[11] = ""+compid; // league
 								appendToBuffer(sb, curData);
 								writeFile("matches.csv", sb.toString(), true);
@@ -435,7 +435,7 @@ public class SoccerBaseCrawler {
 			}
 			scan.close();
 			Collections.sort(p2t);
-			System.out.println(p2t.get(98));
+			System.out.println(p2t.indexOf(28114));
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
