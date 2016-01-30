@@ -1,0 +1,549 @@
+<!doctype html>
+<html>
+	<head>
+		<title>EuroSoccerViz</title>
+		<meta charset = "UTF-8">
+		<meta name="description" content="Soccer Data Analysis & Visualization">
+		<meta name="keywords" content="Soccer, data, prediction, Europe">
+		<style>
+			#map{
+				width: 1024px;
+				height: 768px;
+			}
+			
+			.grid{
+				display: inline-block;
+			}
+
+			.dropdown{
+				display: inline-block;
+			}
+
+			.dropdown ul li{
+				cursor: pointer;
+			}
+
+			#team-info > div{
+				display: inline-block;
+			}
+
+			#league-info{
+				float:right;
+				min-width: 400px;
+				
+			}
+
+			#league-info .panel{
+				text-align: center;
+				margin-bottom: 0;
+			}
+
+			#league-table th{
+				text-align: center;
+			}
+
+			#league-info > div{
+				border: 1px solid #ddd;
+				margin-bottom: 20px;
+				max-height: 47.5vh;
+				overflow-y: auto;
+			}
+
+
+
+			#container > div{
+				max-width: 70vw;
+				max-height: 80vh;
+				overflow-y: auto;
+			}
+
+			#container .panel{
+				display:none;
+			}
+			
+			#container th,td{
+				text-align:center;
+			}
+
+			#sentiment-bar-container{
+				float:right;
+				margin-right: 20px;
+				position:relative;
+				top:30px;
+			}
+
+			#sentiment-bar{
+				width: 200px;
+				height: 20px;
+				position: relative;
+				/* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#ff2828+0,1ec61b+100 */
+				background: #ff2828; /* Old browsers */
+				background: -moz-linear-gradient(left,  #ff2828 0%, #1ec61b 100%); /* FF3.6-15 */
+				background: -webkit-linear-gradient(left,  #ff2828 0%,#1ec61b 100%); /* Chrome10-25,Safari5.1-6 */
+				background: linear-gradient(to right,  #ff2828 0%,#1ec61b 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+				filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ff2828', endColorstr='#1ec61b',GradientType=1 ); /* IE6-9 */
+				border-radius: 10px;
+				/*border:1px solid #ddd;*/
+				
+			}
+
+			#sentiment-bar-label{
+				top: -5px;
+			}
+
+			#sentiment-bar-container > div{
+				display:inline-block;
+				position: relative;
+			}
+
+			#sentiment-face-frown,#sentiment-face-smile{
+				width:20px;
+				height:20px;
+			}
+
+			#sentiment-face-frown{
+				background-image: url('faces.png');
+				background-position: left 20px bottom 0px;
+				background-size: 40px;
+			}
+
+			#sentiment-face-smile{
+				background-image: url('faces.png');
+				background-position: left 0px bottom 0px;
+				background-size: 40px;
+			}
+
+			#sentiment-bar-handle{
+				position:absolute;
+				width:2px;
+				height:30px;
+				background: #888;
+				left:0px;
+				top:-5px;
+				border:2px solid #ccc;
+			}
+
+			.prediction-win{
+				color: #00FF00;
+			}
+
+			.prediction-draw{
+				color: #0000FF;
+			}
+
+			.prediction-lose{
+				color: #FF0000;
+			}
+
+			.prediction-importance{
+				color: orange;
+				position: relative;
+				top: 2px;
+			}
+
+			#team-prediction{
+				margin-left: 40px;
+				font-size: 20px;
+			}
+
+/*			#league-info .panel-heading{
+				background: #f5f5f5;
+			}*/
+
+		</style>
+		<link rel="stylesheet" type="text/css" href="css/map.css">
+		<link rel="stylesheet" href="js/d3/d3.slider.css">
+
+		<!-- Latest compiled and minified CSS -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+		<!-- Optional theme -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+		<link rel="stylesheet" href="css/bootstrap-switch.min.css">
+
+		<script src="js/jquery-2.1.4-min.js"></script>
+		<script src="js/d3/d3.v3.min.js"></script>
+
+		<!-- Latest compiled and minified JavaScript -->
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>		
+		<script src = "js/bootstrap-switch.min.js"></script>
+	</head>
+	<body>
+		<div id="league-info">
+			<div id="league-table">
+				<div class="panel panel-default">
+					<div class="panel-heading">League Table</div>
+				
+					<table class="table">
+						<!--<tr>
+							<th>Rank</th>
+							<th>Team</th>
+							<th>Points</th>
+						</tr>-->
+						<tr>
+							<td>Select a league and a team to begin.</td>
+						</tr>
+					</table>
+				</div>
+			</div>
+			<div id="team-matches">
+				<div class="panel panel-default">
+				    <!-- Default panel contents -->
+				    <div class="panel-heading">Season Matches</div>
+				    <!-- List group -->
+				    <table class="table">
+				    	<tr>
+							<td col-span="3">Select a league and a team to begin.</td>
+						</tr>
+				    </table>
+				</div>
+			</div>
+		</div>
+		<div class="header">
+			<div class="dropdown">
+			  <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+			    Select League
+			    <span class="caret"></span>
+			  </button>
+			  <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+			    <li><a href="#">Loading...</a></li>
+			  </ul>
+			</div>
+			<div class="dropdown">
+			  <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+			    Select Team
+			    <span class="caret"></span>
+			  </button>
+			  <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+			  	<li><a href="#">Loading...</a></li>
+			  </ul>
+			</div>
+			<input type="checkbox" data-on-text="Map" data-off-text="Table" data-label-text="Table" data-on-color="primary" data-off-color="primary" name="my-checkbox" checked>
+		</div>
+
+		<div id="team-info">
+			<div id="team-badge"></div>
+			<div id="team-name"><h3></h3></div>
+			<div id="sentiment-bar-container">
+				<div id="sentiment-bar-label">Media Impression: </div>
+				<div id="sentiment-face-frown"></div>
+				<div id="sentiment-bar">
+					<div id="sentiment-bar-handle"></div>
+				</div>
+				<div id="sentiment-face-smile"></div>
+			</div>
+		</div>
+		<div id="team-prediction"></div>
+
+		<div id="container">
+			<div class="panel panel-default">
+				<div class="panel-heading">Team Roster</div>
+				<table class="table">
+					<tr>
+						<td>Select a league and a team to begin.</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+		<script type="text/javascript" src="js/d3/d3.v3.min.js"></script>
+	    <script src="js/d3/topojson.min.js"></script>
+		<script src="js/d3/queue.min.js"></script>
+		<script type="text/javascript" src="js/d3/d3.slider.js" charset=‘utf-8’></script>
+	    <div id="slider3"></div>
+	    
+	    <script src="js/d3/colorbrewer.js"></script>
+
+
+		<script>
+			// var league = 1;
+			// var team = 142;
+			// var year = 2015;
+			league = 1;
+			team = 142;
+			year = 2015;
+			team_data = null;
+			var data;
+			var league_rankings;
+			var predictions;
+			$(document).ready(function(){
+				d3.json("soccerviz.json", function(json){
+					d3.json("soccerviz_rankings.json", function(rankings){
+						d3.json("soccerviz_dumb.json", function(predicts){
+						// console.log(json);
+							data = json;
+							league_rankings = rankings;
+							predictions = predicts
+
+							$("#league-info").css("min-width", window.innerWidth - $("#container svg").width() - 150 + "px");
+							// $("#league-info .panel,.table").css("max-width", window.innerWidth - $("#container svg").width() - 50 + "px");
+							$("[name='my-checkbox']").bootstrapSwitch()
+													.on("switchChange.bootstrapSwitch",toggleMapTable);
+
+							var dropdowns = document.querySelectorAll(".header .dropdown-menu");
+							$(dropdowns[0]).find("li").remove();
+							$(dropdowns[1]).find("li").remove();
+							for(var i = 0; i < data.leagues.length;i++){
+								// console.log(data.leagues[i]);
+								var l = data.leagues[i];
+								var option = document.createElement("li");
+								option.id = "league_"+l.id_league;
+								option.innerHTML = "<a>"+l.league_name+"</a>";
+								dropdowns[0].appendChild(option);
+								$(option).on("click",selectLeague);
+							}
+							team = data.leagues[0].seasons[0].teams[0].id_team;
+							getTeamList(data.leagues[0].seasons[0]);
+						});
+					});
+				});
+			});
+			function selectLeague(){
+				$(".dropdown:eq(0) button").html(this.innerHTML+' <span class="caret"></span>');
+				$(".dropdown:eq(1) button").html('Select Team <span class="caret"></span>');
+				// console.log(this);
+				league = this.id.split("_")[1];
+				// console.log(league);
+				getTeamList(findYear(findLeague(league), year));
+			}
+
+			function selectTeam(){
+				$(".dropdown:eq(1) button").html(this.innerHTML+' <span class="caret"></span>');
+				team = this.id.split("_")[1];
+				team_data = findTeam(findYear(findLeague(league), year), team);
+				updateInfo();
+			}
+
+			function updateInfo(){
+				//update badge
+				var badge = $("#team-info #team-badge");
+				badge.html("");
+				var logo_image = document.createElement("img");
+				logo_image.src = team_data.logo_url;
+				if(logo_image.src !== "") badge.append(logo_image);
+
+				var nextseason = (year+1) % 100;
+				if(nextseason < 10) nextseason = "0"+nextseason;
+
+				//update name
+				$("#team-info #team-name h3").html(team_data.team_name+" - Season "+year+"/"+nextseason);
+
+				//update prediction
+				predict = hasPrediction();
+				if(!predict){
+					$("#team-prediction").html("");
+				}
+				if(predict){
+					var predictResult;
+					var predictClass;
+					if(predict.matches[0].id_team_home == team){
+						//home
+						if(predict.matches[0].result == -1){
+							predictResult = "L";
+							predictClass = "prediction-lose"
+						}
+						else if(predict.matches[0].result == 0){
+							predictResult = "D";
+							predictClass = "prediction-draw"
+						}
+						else{
+							predictResult = "W";
+							predictClass = "prediction-win"
+						}
+					}
+					else if(predict.matches[0].id_team_away == team){
+						//home
+						if(predict.matches[0].result == -1){
+							predictResult = "W";
+							predictClass = "prediction-win"
+						}
+						else if(predict.matches[0].result == 0){
+							predictResult = "D";
+							predictClass = "prediction-draw"
+						}
+						else{
+							predictResult = "L";
+							predictClass = "prediction-lose"
+						}
+					}
+					var _importance = "";
+					for(var i = 0; i <= 3; i += 0.6){
+						if(i <= predict.matches[0].importance){
+							_importance += '<span class="glyphicon glyphicon-star" aria-hidden="true"></span>';
+						}
+					}
+					$("#team-prediction").html("<div><span>Next Match: </span><span>vs. "+predict.matches[0].name_team_opponent+"</span>  |  <span>Prediction: </span><span class='"+predictClass+"'>"+predictResult+"</span>  |  <span>Importance: </span><span class='prediction-importance'>"+_importance+"</span></div>");
+				}
+
+				//update league
+				var season_ranking = findSeasonTable(findLeagueInRanking(league), year);
+				$("#league-table .table").html("<tr><th>Rank</th><th>Team</th><th>Points</th></tr>");
+				for(var i = 0; i < season_ranking.teams.length; i++){
+					var tr = document.createElement("tr");
+					var td = document.createElement("td");
+					td.innerHTML = season_ranking.teams[i].rank;
+					tr.appendChild(td);
+					td = document.createElement("td");
+					td.innerHTML = season_ranking.teams[i].team_name;
+					tr.appendChild(td);
+					td = document.createElement("td");
+					td.innerHTML = season_ranking.teams[i].points;
+					tr.appendChild(td);
+					if(season_ranking.teams[i].id_team == team) tr.className = "active";
+					$("#league-table .table").append(tr);
+				}
+
+				//update matches
+				$("#team-matches .table").html("<tr><th></th><th></th><th>Match</th><th></th><th></th><th>Importance</th></tr>");
+				// console.log(team_data.matches);
+				for(var i = 0; i < team_data.matches.length; i++){
+					var tr = document.createElement("tr");
+					var td_home = document.createElement("td");
+					var td_away = document.createElement("td");
+					var home_name = team_data.matches[i].id_team_home === team_data.id_team ? team_data.team_name : findTeam(findYear(findLeague(league),year),team_data.matches[i].id_team_home).team_name;
+					var away_name = team_data.matches[i].id_team_away === team_data.id_team ? team_data.team_name : findTeam(findYear(findLeague(league),year),team_data.matches[i].id_team_away).team_name;
+					var home_goals = document.createElement("td");
+					var away_goals = document.createElement("td");
+					td_home.innerHTML = home_name;
+					td_away.innerHTML = away_name;
+					var seperator = document.createElement("td");
+					seperator.innerHTML = "-";
+					home_goals.innerHTML = "<b>" + team_data.matches[i].goals_home + "</b>";
+					away_goals.innerHTML = "<b>" + team_data.matches[i].goals_away + "</b>"
+					tr.appendChild(td_home);
+					$(td_home).css("text-align","right");
+					tr.appendChild(home_goals);
+					tr.appendChild(seperator);
+					tr.appendChild(away_goals);
+					tr.appendChild(td_away);
+
+					seperator = document.createElement("td");
+					var stars = "";
+					for(var j = 0; j <= 3; j += 0.6){
+						if(j <= team_data.matches[i].importance) 
+							stars += '<span class="glyphicon glyphicon-star" aria-hidden="true"></span>';
+					}
+					seperator.innerHTML = stars;
+					$(seperator).css({
+						"font-weight":"bold",
+						"color":"orange"
+					});
+					tr.appendChild(seperator);
+
+					$(td_away).css("text-align","left");
+					// tr.className = "list-group-item";
+					// console.log(tr);
+					$("#team-matches .table").append(tr);
+				}
+
+				$("#container .table").html("");
+				$("#container .table").html("<tr><th>Name</th><th>Position</th><th>Appearances</th><th>Nationality</th></tr>");
+				for(var i = 0; i < team_data.roster.length; i++){
+					var tr = document.createElement("tr");
+					var td = document.createElement("td");
+					td.innerHTML = team_data.roster[i].name;
+					tr.appendChild(td);
+					td = document.createElement("td");
+					td.innerHTML = team_data.roster[i].position;
+					tr.appendChild(td);
+					td = document.createElement("td");
+					td.innerHTML = team_data.roster[i].appearances;
+					tr.appendChild(td);
+					td = document.createElement("td");
+					td.innerHTML = team_data.roster[i].nation_name;
+					tr.appendChild(td);
+					$("#container .table").append(tr);
+				}
+
+				updateChart();
+				$("#sentiment-bar-container").css("display","block");
+				var sentscore = team_data.season_sentiment;
+				if(sentscore === "NA") sentscore = 0.5;
+				$("#sentiment-bar-handle").css({
+					"left":(Number(sentscore)+1)/2*$("#sentiment-bar").width()+"px"
+				});
+
+			}
+
+			function toggleMapTable(event, state){
+				$("#container svg").toggle();
+				$("#container .panel").toggle();
+				var label = $(".bootstrap-switch-label").html();
+				if(label === "Table"){
+					$(".bootstrap-switch-label").html("Map");
+				}
+				else
+					$(".bootstrap-switch-label").html("Table");
+			}
+
+			function getTeamList(tournament){
+				var dropdown = document.querySelectorAll(".header .dropdown-menu")[1];
+				dropdown.innerHTML = "";
+				for(var i = 0; i < tournament.teams.length; i++){
+					// console.log(tournament.teams[i]);
+					var option = document.createElement("li");
+					option.id = "team_"+tournament.teams[i].id_team;
+					option.innerHTML = "<a>"+tournament.teams[i].team_name+"</a>";
+					dropdown.appendChild(option);
+					$(option).on("click",selectTeam);
+				}
+			}
+
+			function findLeague(l){
+				for(var i = 0; i < data.leagues.length; i++){
+					if(data.leagues[i].id_league == l){
+						// console.log(data.leauges[i]);
+						return data.leagues[i];
+					}
+				}
+			}
+
+			function findYear(l_data, y){
+				for(var i = 0; i < l_data.seasons.length; i++){
+					if(l_data.seasons[i].season == y) return l_data.seasons[i];
+				}
+			}
+
+			function findTeam(y_data, t){
+				// console.log(t);
+				for(var i = 0; i < y_data.teams.length; i++){
+					if(y_data.teams[i].id_team == t) { return y_data.teams[i];}
+				}
+			}
+
+			function findLeagueInRanking(l){
+				for(var i = 0; i < league_rankings.leagues.length; i++){
+					if(league_rankings.leagues[i].id_league == l) { return league_rankings.leagues[i];}
+				}
+			}
+
+			function findSeasonTable(l_data, y){
+				for(var i = 0; i < l_data.seasons.length; i++){
+					if(l_data.seasons[i].season == y) { return l_data.seasons[i];}
+				}
+			}
+
+			function hasPrediction(){
+				console.log("called")
+				var ret = null;
+				for(var i = 0; i < predictions.leagues.length; i++){
+					if(predictions.leagues[i].id_league == league){
+						for(var j = 0; j < predictions.leagues[i].seasons.length; j++){
+							if(predictions.leagues[i].seasons[j].season == year){
+								for(var k = 0; k < predictions.leagues[i].seasons[j].teams.length; k++){
+									if(predictions.leagues[i].seasons[j].teams[k].id_team == team){
+										ret = predictions.leagues[i].seasons[j].teams[k];
+									}
+								}
+
+							}
+						}
+					}
+				}
+				return ret;
+			}
+			
+		</script>
+		<script src="js/map.js"></script>
+	</body>
+</html>
